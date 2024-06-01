@@ -1,18 +1,19 @@
 from app import app
-from flask import request, jsonify
-from rq import Queue
+from flask import Blueprint, request, jsonify
 from app.tasks import background_task,queue_tasks
 from rq.registry import FailedJobRegistry, FinishedJobRegistry, StartedJobRegistry, CanceledJobRegistry
 
-@app.route('/addtask/')
+bp = Blueprint('bp', __name__)
+
+@bp.route('/addtask/')
 def add_task():
     if request.args.get('n'):
         job = queue_tasks.enqueue(background_task, request.args.get('n'))
         return f"Task {job.id} added to queue at {job.enqueued_at}. There are currently {queue_tasks.count} tasks in the queue."
     return "Missing parameter 'n'."
 
-@app.route('/searchtask/')
-def task_search():
+@bp.route('/searchtask/')
+def search_task():
     job_id = request.args.get('id')
     if job_id:
         job = queue_tasks.fetch_job(job_id)
@@ -36,7 +37,7 @@ def task_search():
                 return jsonify(job_info)
     return f"No task with id: {job_id}"
 
-@app.route('/canceltask/')
+@bp.route('/canceltask/')
 def cancel_task():
     job_id = request.args.get('id')
     if job_id:
@@ -47,7 +48,7 @@ def cancel_task():
         return f"No task with id: {job_id}"
     return "Missing parameter 'id'."
 
-@app.route('/deletetask/')
+@bp.route('/deletetask/')
 def delete_task():
     job_id = request.args.get('id')
     if job_id:
@@ -58,7 +59,7 @@ def delete_task():
         return f"No task with id: {job_id}"
     return "Missing parameter 'id'."
 
-@app.route('/getall/')
+@bp.route('/getall/')
 def get_all():
     all_jobs = queue_tasks.get_jobs()
     finished_jobs = FinishedJobRegistry(queue=queue_tasks).get_job_ids()
@@ -73,6 +74,3 @@ def get_all():
         "failed_jobs": failed_jobs
     }
     return jsonify(response)
-
-if __name__ == '__main__':
-    app.run()
