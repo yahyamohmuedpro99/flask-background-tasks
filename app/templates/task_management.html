@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Management</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+
+<div class="container mt-5">
+    <h1 class="text-center mb-4">Task Management</h1>
+
+    <!-- Search Bar -->
+    <div class="input-group mb-3">
+        <input type="text" class="form-control" id="searchInput" placeholder="Search by Task ID" aria-label="Search by Task ID" aria-describedby="searchBtn">
+        <div class="input-group-append">
+            <button class="btn btn-primary" type="button" id="searchBtn">Search</button>
+        </div>
+    </div>
+
+    <!-- Add Task Button -->
+    <button type="button" class="btn btn-success mb-3" data-toggle="modal" data-target="#addTaskModal">Add Task</button>
+
+    <!-- Task List Table -->
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">Task ID</th>
+                <th scope="col">Description</th>
+                <th scope="col">Start Date</th>
+                <th scope="col">Enqueued Date</th>
+                <th scope="col">End Date</th>
+                <th scope="col">Status</th>
+                <th scope="col">Actions</th>
+            </tr>
+        </thead>
+        <tbody id="taskList">
+            <!-- Tasks will be dynamically added here -->
+        </tbody>
+    </table>
+</div>
+
+<!-- Cancel Task Modal -->
+<div class="modal fade" id="cancelTaskModal" tabindex="-1" aria-labelledby="cancelTaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="cancelTaskModalLabel">Cancel Task</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to cancel this task?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-danger" id="confirmCancelBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Task Modal -->
+<div class="modal fade" id="deleteTaskModal" tabindex="-1" aria-labelledby="deleteTaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteTaskModalLabel">Delete Task</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this task?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Task Modal -->
+<div class="modal fade" id="addTaskModal" tabindex="-1" aria-labelledby="addTaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addTaskModalLabel">Add Task</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Form for adding new task -->
+                <form id="addTaskForm">
+                    <div class="form-group">
+                        <label for="taskDescription">Description</label>
+                        <input type="text" class="form-control" id="taskDescription" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Task</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- jQuery and Bootstrap JS -->
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.1/dist/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<!-- JavaScript code for interacting with backend -->
+<script>
+// Function to fetch and display tasks
+function fetchTasks() {
+    // Make AJAX request to fetch tasks
+    $.get("/getall", function(data) {
+        // Clear existing task list
+        $("#taskList").empty();
+
+        // Function to fetch details for a single job
+        function fetchJobDetails(jobId) {
+            $.get("/searchtask?id=" + jobId, function(jobDetails) {
+                // Display task details in the table
+                $("#taskList").append(`
+                    <tr>
+                        <td>${jobDetails.id}</td>
+                        <td>${jobDetails.description}</td>
+                        <td>${jobDetails.start_date}</td>
+                        <td>${jobDetails.enqueued_at}</td>
+                        <td>${jobDetails.end_date}</td>
+                        <td>${jobDetails.status}</td>
+                        <td>
+                            <button class="btn btn-danger cancelBtn" data-id="${jobDetails.id}">Cancel</button>
+                            <button class="btn btn-warning deleteBtn" data-id="${jobDetails.id}">Delete</button>
+                        </td>
+                    </tr>
+                `);
+            });
+        }
+
+        // Display canceled jobs
+        data.canceled_jobs.forEach(function(id) {
+            fetchJobDetails(id);
+        });
+
+        // Display failed jobs
+        data.failed_jobs.forEach(function(id) {
+            fetchJobDetails(id);
+        });
+
+        // Display finished jobs
+        data.finished_jobs.forEach(function(id) {
+            fetchJobDetails(id);
+        });
+        // started jobs in progress
+        data.started_jobs.forEach(function(id) {
+            fetchJobDetails(id);
+        });
+    });
+}
+
+
+    // Function to search tasks
+    $("#searchBtn").click(function() {
+        var taskId = $("#searchInput").val();
+        // Make AJAX request to search for task
+        $.get("/searchtask?id=" + taskId, function(data) {
+            // Display task details if found
+            if (data) {
+                alert(JSON.stringify(data));
+            } else {
+                alert("Task not found!");
+            }
+        });
+    });
+
+    // Function to cancel task
+    $(document).on("click", ".cancelBtn", function() {
+        var taskId = $(this).data("id");
+        $("#confirmCancelBtn").data("id", taskId);
+        $("#cancelTaskModal").modal("show");
+    });
+
+    // Function to delete task
+    $(document).on("click", ".deleteBtn", function() {
+        var taskId
+        = $(this).data("id");
+        $("#confirmDeleteBtn").data("id", taskId);
+        $("#deleteTaskModal").modal("show");
+    });
+
+    // Function to confirm cancellation
+    $("#confirmCancelBtn").click(function() {
+        var taskId = $(this).data("id");
+        // Make AJAX request to cancel task
+        $.get("/canceltask?id=" + taskId, function(data) {
+            // Reload tasks after cancellation
+            fetchTasks();
+        });
+        $("#cancelTaskModal").modal("hide");
+    });
+
+    // Function to confirm deletion
+    $("#confirmDeleteBtn").click(function() {
+        var taskId = $(this).data("id");
+        // Make AJAX request to delete task
+        $.get("/deletetask?id=" + taskId, function(data) {
+            // Reload tasks after deletion
+            fetchTasks();
+        });
+        $("#deleteTaskModal").modal("hide");
+    });
+
+    // Function to handle add task form submission
+    $("#addTaskForm").submit(function(event) {
+        event.preventDefault();
+        var taskDescription = $("#taskDescription").val();
+        // Make AJAX request to add new task
+        $.get("/addtask?n=" + taskDescription, function(data) {
+            // Reload tasks after addition
+            fetchTasks();
+            $("#addTaskModal").modal("hide");
+        });
+    });
+
+    // Fetch tasks on page load
+    fetchTasks();
+</script>
+
+</body>
+</html>

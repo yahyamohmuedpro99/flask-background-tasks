@@ -1,5 +1,5 @@
 from app import app
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, render_template, request, jsonify
 from app.tasks import background_task,queue_tasks
 from rq.registry import FailedJobRegistry, FinishedJobRegistry, StartedJobRegistry, CanceledJobRegistry
 
@@ -65,12 +65,18 @@ def get_all():
     finished_jobs = FinishedJobRegistry(queue=queue_tasks).get_job_ids()
     canceled_jobs = CanceledJobRegistry(queue=queue_tasks).get_job_ids()
     failed_jobs = FailedJobRegistry(queue=queue_tasks).get_job_ids()
+    started=StartedJobRegistry(queue=queue_tasks).get_job_ids()
 
     response = {
         "all_jobs_count": len(all_jobs),
         "all_jobs": [job.get_status() for job in all_jobs],
         "finished_jobs": finished_jobs,
         "canceled_jobs": canceled_jobs,
-        "failed_jobs": failed_jobs
+        "failed_jobs": failed_jobs,
+        "started_jobs": started,
     }
     return jsonify(response)
+
+@bp.route('/task_management/')
+def task_management():
+    return render_template('task_management.html')
